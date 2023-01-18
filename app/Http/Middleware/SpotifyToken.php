@@ -12,6 +12,7 @@ class SpotifyToken
 
     public function handle(Request $request, Closure $next)
     {
+        // when we redirected from specify to redirect URI we receive *code*
         if ($request->get('code')) {
             $session = new SpotifySession(
                 env('SPOTIFY_CLIENT_ID'),
@@ -19,6 +20,7 @@ class SpotifyToken
                 env('REDIRECT_URI')
             );
 
+            // code is used to get access token
             $session->requestAccessToken($request->get('code'));
             Session::put('spotify_token', $session->getAccessToken());
             return redirect('/token-test');

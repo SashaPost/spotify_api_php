@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\SpotifyToken;
 use Exception;
 use SpotifyWebAPI\Session;
 use Illuminate\Http\Request;
@@ -85,6 +86,8 @@ class SpotifyController extends BaseController
 
     public function myPlaylists(Request $request)
     {
+        // set in the SpotifyToken middleware after /auth
+        /** @see SpotifyToken */
         $token = SessionLaravel::get('spotify_token');
         $spot_sess = new SpotifyWebAPI();
 
@@ -93,11 +96,13 @@ class SpotifyController extends BaseController
         $playlists = $spot_sess->getMyPlaylists();
 
         foreach ($playlists->items as $playlist) {
+            // pick up cached tracks for playlist to avoid requests for each playlist all the time
             $tracks = Cache::get($playlist->id);
 
             if (!$tracks) {
                 $playlistTracks = $spot_sess->getPlaylistTracks($playlist->id);
                 $tracks = $playlistTracks->items;
+                // putting tracks from playlist into cache identified by playlist ID
                 Cache::set($playlist->id, $tracks);
             }
 
