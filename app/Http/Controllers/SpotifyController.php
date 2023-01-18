@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\SpotifyToken;
+use Exception;
 use SpotifyWebAPI\Session;
 use Illuminate\Http\Request;
 use SpotifyWebAPI\SpotifyWebAPI;
@@ -10,7 +12,8 @@ use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Session as SessionLaravel;
-
+use SpotifyWebAPI\SpotifyWebAPIException;
+use Illuminate\Support\Facades\Cache;
 
 class SpotifyController extends BaseController
 {
@@ -35,26 +38,30 @@ class SpotifyController extends BaseController
 
         // header('Location: ' . $session->getAuthorizeUrl($options));
 
-        
+
         // $this->token = $session->requestAccessToken($request->get('code'));
     }
-    
-    public function auth (Request $request) {
+
+    public function auth(Request $request)
+    {
         $session = new Session(
             env('SPOTIFY_CLIENT_ID'),
             env('SPOTIFY_CLIENT_SECRET'),
             env('REDIRECT_URI')
         );
-        
+
         $options = [
             'scope' => [
                 'playlist-read-private',
-                'user-read-private'
+                'user-read-private',
+                'user-read-email',
+                'playlist-read-collaborative',
+                'user-follow-read',
             ],
         ];
-        
+
         // new \Illuminate\ Support\Facades\Session::put('spotify_token', );
-        
+
         return redirect($session->getAuthorizeUrl($options));
     }
 
@@ -62,12 +69,13 @@ class SpotifyController extends BaseController
     {
         return SessionLaravel::get('spotify_token');
     }
-    
+
 
     public function token(Request $request)
     {
-        if (1) {}
-        return SessionLaravel::get('spotify_token');    
+        if (1) {
+        }
+        return SessionLaravel::get('spotify_token');
     }
 
     public function renderToken(Request $request)
@@ -78,16 +86,32 @@ class SpotifyController extends BaseController
 
     public function myPlaylists(Request $request)
     {
-        // $token = SessionLaravel::get('spotify_token');
-        $token = 'BQCKImO32s3IQxdznS3f40q_21vhx6p-tXquqwqTZSKIJks4cibfDgbceO2rsP_UUK-XoDumSFw__X31u0lCT89yxTyHGm-aUG29ICJeCJtHFrTu4V0AoL9vVr0RBuF1gH1n08yDrQuEDRjQw9D2JK-BRXWCyG1M7w94a4Ygu7BRz5d184YvjbseNWIOzBpENCW7y6NWX1ve';
+        // set in the SpotifyToken middleware after /auth
+        /** @see SpotifyToken */
+        $token = SessionLaravel::get('spotify_token');
         $spot_sess = new SpotifyWebAPI();
+
+        $playlistsFormatted = [];
         $spot_sess->setAccessToken($token);
         $playlists = $spot_sess->getMyPlaylists();
-        return view('playlists', ['playlists' => $playlists]);
+
+        foreach ($playlists->items as $playlist) {
+            // pick up cached tracks for playlist to avoid requests for each playlist all the time
+            $tracks = Cache::get($playlist->id);
+
+            if (!$tracks) {
+                $playlistTracks = $spot_sess->getPlaylistTracks($playlist->id);
+                $tracks = $playlistTracks->items;
+                // putting tracks from playlist into cache identified by playlist ID
+                Cache::set($playlist->id, $tracks);
+            }
+
+            $playlistsFormatted[] = [
+                'name' => $playlist->name,
+                'tracks' => $tracks
+            ];
+        }
+
+        return view('playlists', ['playlists' => $playlistsFormatted]);
     }
 }
-
-
-
-
-?>
