@@ -1,9 +1,13 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use SpotifyWebAPI\Session;
-use SpotifyWebAPI\SpotifyWebAPI;
 use Illuminate\Http\Request;
+use SpotifyWebAPI\SpotifyWebAPI;
+use App\Http\Controllers\Controller;
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SpotifyController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -20,33 +24,54 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/test', function () {
-    $session = new Session(
-         env('SPOTIFY_CLIENT_ID'),
-         env('SPOTIFY_CLIENT_SECRET'),
-        'ngrok-redirect-here'
-    );
 
-
-    $options = [
-        'scope' => [
-            'user-read-email',
-            'user-read-private',
-        ],
-    ];
-
-    header('Location: ' . $session->getAuthorizeUrl($options));
-    die();
+Route::get('template-test/', function () {
+    return view('test');
 });
 
-Route::get('test2', function (Request $request) {
+
+
+Route::get('controller-test/', [Controller::class, 'index']);
+
+Route::get('auth/', [SpotifyController::class, 'auth', 'auth']);
+
+// Route::get('token-test', [SpotifyController::class, 'token']);
+Route::get('token-test', [SpotifyController::class, 'renderToken']);
+
+Route::get('playlists', [SpotifyController::class, 'myPlaylists']);
+
+Route::get('test', [SpotifyController::class, 'test']);
+
+// transfered to SpotifyController
+// Route::get('test/', function () {
+//     $session = new Session(
+//          env('SPOTIFY_CLIENT_ID'),
+//          env('SPOTIFY_CLIENT_SECRET'),
+//         // 'ngrok-redirect-here'
+//         env('REDIRECT_URI')
+//     );
+
+
+//     $options = [
+//         'scope' => [
+//             'user-read-email',
+//             'user-read-private',
+//         ],
+//     ];
+
+//     header('Location: ' . $session->getAuthorizeUrl($options));
+//     die();
+// });
+
+Route::get('test2/', function (Request $request) {
     $session = new Session(
          env('SPOTIFY_CLIENT_ID'),
          env('SPOTIFY_CLIENT_SECRET'),
-        'ngrok-redirect-here'
+         env('REDIRECT_URI')
     );
 
-    $session->requestAccessToken($request->get('code')); // $session->requestAccessToken($code);
+    $session->requestAccessToken($request->get('code')); 
+    // $session->requestAccessToken($code);
     $api = new SpotifyWebAPI(['auto_refresh' => true], $session);
     $api->setAccessToken($session->getAccessToken());
 
