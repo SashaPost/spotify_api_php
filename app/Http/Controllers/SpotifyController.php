@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TimeConverter;
 use App\Http\Middleware\SpotifyToken;
 use Exception;
 use SpotifyWebAPI\Session;
@@ -15,13 +16,16 @@ use Illuminate\Support\Facades\Session as SessionLaravel;
 use SpotifyWebAPI\SpotifyWebAPIException;
 use Illuminate\Support\Facades\Cache;
 
+// use TimeConverter;
+
+
 class SpotifyController extends BaseController
 {
     use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
 
     public string $token = "";
-
-    public function __construct(Request $request)
+    protected $timeConverter;
+    public function __construct(Request $request, TimeConverter $timeConverter)
     {
         $session = new Session(
             env('SPOTIFY_CLIENT_ID'),
@@ -35,6 +39,8 @@ class SpotifyController extends BaseController
                 'user-read-private'
             ],
         ];
+
+        $this->timeConverter = new $timeConverter;
 
         // header('Location: ' . $session->getAuthorizeUrl($options));
 
@@ -57,7 +63,9 @@ class SpotifyController extends BaseController
                 'user-read-email',
                 'playlist-read-collaborative',
                 'user-follow-read',
+                'user-library-read'
             ],
+            'auto_refresh' => true
         ];
 
         // new \Illuminate\ Support\Facades\Session::put('spotify_token', );
@@ -86,6 +94,7 @@ class SpotifyController extends BaseController
 
     public function myPlaylists(Request $request)
     {
+
         // set in the SpotifyToken middleware after /auth
         /** @see SpotifyToken */
         $token = SessionLaravel::get('spotify_token');
@@ -112,6 +121,105 @@ class SpotifyController extends BaseController
             ];
         }
 
-        return view('playlists', ['playlists' => $playlistsFormatted]);
+        // added by me:
+        $my_acc = $spot_sess->me();
+        $my_name = $my_acc->display_name;
+
+        return view('playlists', [
+            'playlists' => $playlistsFormatted,
+            'my_name' => $my_name
+        ]);
+    }
+    
+    public function myAlbums(Request $request)
+    {
+        $token = SessionLaravel::get('spotify_token');
+        // $options = [
+        //     'auto_refresh' => true
+        // ];
+
+        $spot_sess = new SpotifyWebAPI();
+        $spot_sess->setAccessToken($token);
+
+        $limit = 50;
+        $offset = 0;
+        $albums = [];
+
+        while ($response = $spot_sess->getMySavedAlbums([
+            'limit' => $limit,
+            'offset' => $offset
+        ])) {
+            $albums = array_merge($albums, $response->items);
+            // break;
+            $offset += $limit;
+
+            if ($offset > $response->total) {
+                break;
+            }
+        }
+
+        return view('my-albums', [
+            'albums' => $albums
+            // 'test' => $test
+        ]);
+    }
+
+    public function myLikedSongs(Request $request)
+    {
+        $token = SessionLaravel::get('spotify_token');
+        $spot_sess = new SpotifyWebAPI();
+        $spot_sess->setAccessToken($token);
+
+        $saved_tracks = $spot_sess->getMySavedTracks();
+
+        $limit = 50;
+        $offset = 0;
+        $all_tracks = [];
+
+        while ($saved_tracks = $spot_sess->getMySavedTracks([
+            'limit' => $limit,
+            'offset' => $offset
+        ])) {
+            $all_tracks = array_merge($all_tracks, $saved_tracks->items);
+            $offset += $limit;
+
+            if ($offset > $saved_tracks->total) {
+                break;
+            }
+        }
+
+        $tracks_properties = [];
+        foreach ($all_tracks as $track) {
+            $track_name = $track->track?->name;
+            $artist = $track->track?->album->artists[0]->name;
+            $album = $track->track?->album->name;
+            $release_date = $track->track?->album->release_date;
+            $duration_ms = $track->track?->duration_ms;
+            $isrc = $track->track?->external_ids->isrc;
+            $spotify_id = $track->track?->id;
+            $uri = $track->track?->uri;
+
+            $duration = $this->timeConverter->convertMilliseconds($duration_ms);
+
+            array_push($tracks_properties, array(
+                'track_name' => $track_name,
+                'artist' => $artist,
+                'album' => $album,
+                'release_date' => $release_date,
+                'duration' => $duration,
+                'isrc' => $isrc,
+                'spotify_id' => $spotify_id,
+                'uri' => $uri
+            ));
+        }
+            
+        // add an option to render list divited on pages by 100 records
+        // $paginated_tracks = collect($tracks_properties)->chunk(100);
+
+        // Configure the Cache usage
+
+        return view('my-tracks', [
+            'tracks_properties' => $tracks_properties
+        ]);
     }
 }

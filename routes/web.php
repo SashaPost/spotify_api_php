@@ -20,25 +20,34 @@ use App\Http\Controllers\SpotifyController;
 |
 */
 
+// first:
+Route::get('auth', [SpotifyController::class, 'auth', 'auth']);
+
+// redirects here:
+Route::get('token-test', [SpotifyController::class, 'renderToken']);
+
+// functional links:
+Route::get('playlists', [SpotifyController::class, 'myPlaylists']);
+Route::get('my-albums', [SpotifyController::class, 'myAlbums']);
+
+// home page:
+Route::get('index', function () {
+    return view('test');
+});
+
+// under construction:
+Route::get('my-tracks', [SpotifyController::class, 'myLikedSongs']);
+
+
+
+// old tests:
 Route::get('/', function () {
     return view('welcome');
 });
 
-
-Route::get('template-test/', function () {
-    return view('test');
-});
-
-
-
-Route::get('controller-test/', [Controller::class, 'index']);
-
-Route::get('auth/', [SpotifyController::class, 'auth', 'auth']);
+// Route::get('controller-test/', [Controller::class, 'index']);
 
 // Route::get('token-test', [SpotifyController::class, 'token']);
-Route::get('token-test', [SpotifyController::class, 'renderToken']);
-
-Route::get('playlists', [SpotifyController::class, 'myPlaylists']);
 
 Route::get('test', [SpotifyController::class, 'test']);
 
@@ -63,17 +72,17 @@ Route::get('test', [SpotifyController::class, 'test']);
 //     die();
 // });
 
-Route::get('test2/', function (Request $request) {
-    $session = new Session(
-         env('SPOTIFY_CLIENT_ID'),
-         env('SPOTIFY_CLIENT_SECRET'),
-         env('REDIRECT_URI')
-    );
+// Route::get('test2/', function (Request $request) {
+//     $session = new Session(
+//          env('SPOTIFY_CLIENT_ID'),
+//          env('SPOTIFY_CLIENT_SECRET'),
+//          env('REDIRECT_URI')
+//     );
 
-    $session->requestAccessToken($request->get('code')); 
-    // $session->requestAccessToken($code);
-    $api = new SpotifyWebAPI(['auto_refresh' => true], $session);
-    $api->setAccessToken($session->getAccessToken());
+//     $session->requestAccessToken($request->get('code')); 
+//     // $session->requestAccessToken($code);
+//     $api = new SpotifyWebAPI(['auto_refresh' => true], $session);
+//     $api->setAccessToken($session->getAccessToken());
 
-    return $api->me();
-});
+//     return $api->me();
+// });
