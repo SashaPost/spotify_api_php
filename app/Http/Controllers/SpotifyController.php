@@ -92,6 +92,11 @@ class SpotifyController extends BaseController
         return view('template-test', ['token' => $token]);
     }
 
+    // needs improvement
+    // doesn't even show the length of playlist
+    // or would be even better to write another method
+    // to render the full playlist's contents and other info
+    // and the other one to list all playlists and redirects to previous after choosing one of them
     public function myPlaylists(Request $request)
     {
 
