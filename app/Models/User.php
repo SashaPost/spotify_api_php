@@ -41,4 +41,24 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public function songs()
+    {
+        return $this->belongsToMany('App\Song', 'user_songs', 'user_id', 'song_id');
+    }
+
+    public function playlists()
+    {
+        return $this->belongsToMany('App\Playlist', 'user_playlist', 'user_id', 'playlist_id');
+    }
+
+    public function albums()
+    {
+        return $this->belongsToMany('App\Album', 'user_albums', 'user_id', 'album_id');
+    }
+
+    public function artists()
+    {
+        return $this->belongsToMany('App\Artist', 'user_artists', 'user_id', 'artist_id');
+    }
 }
