@@ -38,6 +38,9 @@ Route::get('index', function () {
 // under construction:
 Route::get('my-tracks', [SpotifyController::class, 'myLikedSongs']);
 
+// get 'my saved tracks' to the database
+Route::get('save-my-tracks', [SpotifyController::class, 'getSavedTracksToDatabase']);
+
 
 
 // old tests:

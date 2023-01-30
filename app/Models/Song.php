@@ -9,6 +9,15 @@ class Song extends Model
 {
     use HasFactory;
 
+    // protected $fillable = [
+    //     // table fields
+    //     // fill that in other tables as well
+    //     // '$fillable' allows to use the create method 
+    //     // or the update method to assign values to the 
+    //     // listed attributes in a single line, 
+    //     // rather than setting each attribute individually
+    //     'name', 
+    // ];
     public function artist() 
     {
         return $this->belongsTo('App/Artist', 'artist_id');

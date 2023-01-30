@@ -13,6 +13,11 @@ return new class extends Migration
      */
     public function up()
     {
+        // maybe it woth to replace the 'id' field with 'spotify_id'?
+        // ask Dron
+        
+        // add the 'track_number' field
+        // 'pupularity' (later)
         Schema::create('songs', function (Blueprint $table) {
             $table->id();
             $table->string('name');
