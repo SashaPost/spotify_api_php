@@ -38,7 +38,8 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            SpotifyToken::class
+            // SpotifyToken::class
+            \App\Http\Middleware\SpotifyTokenAutorefresh::class
         ],
 
         'api' => [

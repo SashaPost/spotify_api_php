@@ -12,7 +12,7 @@ class SpotifyToken
 
     public function handle(Request $request, Closure $next)
     {
-        // when we redirected from specify to redirect URI we receive *code*
+        // when we redirected from Spotify to redirect URI we receive *code*
         if ($request->get('code')) {
             $session = new SpotifySession(
                 env('SPOTIFY_CLIENT_ID'),

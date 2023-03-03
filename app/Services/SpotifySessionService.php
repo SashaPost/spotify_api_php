@@ -11,7 +11,12 @@ use SpotifyWebAPI\Session;
 class SpotifySessionService {
     public function instantiateSession() {
         $token = SessionLaravel::get('spotify_token');
-        $spot_sess = new SpotifyWebAPI();
+        $spot_sess = new SpotifyWebAPI(
+            [
+                'auto_refresh' => true, 
+                'auto_retry' => true
+            ]
+        );
         $spot_sess->setAccessToken($token);
         return $spot_sess;
     }

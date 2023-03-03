@@ -15,13 +15,13 @@ use App\Jobs\UpdateSavedSongsData;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Middleware\SpotifyToken;
+// use App\Http\Middleware\SpotifyToken;
+use App\Http\Middleware\SpotifyTokenAutorefresh;
 use Illuminate\Support\Facades\Cache;
 use SpotifyWebAPI\SpotifyWebAPIException;
 // use Telegram\Bot\Laravel\Facades\Telegram;
 
 use Illuminate\Foundation\Bus\DispatchesJobs;
-use App\Models\SpotifyToken as SpotifyTokenModel;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 
