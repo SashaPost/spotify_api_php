@@ -22,10 +22,11 @@ class SpotifyToken
 
             // code is used to get access token
             $session->requestAccessToken($request->get('code'));
-            Session::put('spotify_token', $session->getAccessToken());
+            $token = $session->getAccessToken();
+            Session::put('spotify_token', $token); // this code stores the 'access token' in the session;
+            
             return redirect('/token-test');
         }
-
         return $next($request);
     }
 }

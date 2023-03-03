@@ -32,7 +32,7 @@ Route::get('my-albums', [SpotifyController::class, 'myAlbums']);
 
 // home page:
 Route::get('index', function () {
-    return view('test');
+    return view('index');
 });
 
 // under construction:
@@ -40,6 +40,8 @@ Route::get('my-tracks', [SpotifyController::class, 'myLikedSongs']);
 
 // get 'my saved tracks' to the database
 Route::get('save-my-tracks', [SpotifyController::class, 'getSavedTracksToDatabase']);
+
+Route::get('test-the-bot', [SpotifyController::class, 'testTgBot']);
 
 
 

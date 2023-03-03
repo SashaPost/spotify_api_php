@@ -9,6 +9,12 @@ class Artist extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'name',
+        'spotify_url',
+        'spotify_id'
+    ];
+
     public function songs()
     {
         return $this->hasMany('App\Song', 'artist_id', 'id');

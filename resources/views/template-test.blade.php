@@ -1,3 +1,4 @@
 <!DOCTYPE html>
 
-<p>Token: {{ $token }}</p>
+<p>Token: {{ dd($token) }}</p>
+<p>{{ $session }}</p>

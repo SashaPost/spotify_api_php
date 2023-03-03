@@ -13,9 +13,12 @@ return new class extends Migration
      */
     public function up()
     {
+        // change the duration from the ms to '00:00'
+        // run migration
+
         // maybe it woth to replace the 'id' field with 'spotify_id'?
         // ask Dron
-        
+
         // add the 'track_number' field
         // 'pupularity' (later)
         Schema::create('songs', function (Blueprint $table) {

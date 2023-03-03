@@ -20,6 +20,10 @@ return new class extends Migration
             $table->string('spotify_id');
             $table->timestamps();
         });
+
+        Schema::table('artists', function (Blueprint $table) {
+            $table->string('spotify_url')->default('')->change();
+        });
     }
 
     /**
