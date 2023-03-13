@@ -2,22 +2,58 @@
 
 namespace App\Services;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session as SessionLaravel;
-use SpotifyWebAPI\SpotifyWebAPI;
 use SpotifyWebAPI\Session;
-
+use App\Models\SpotifyToken;
+use SpotifyWebAPI\SpotifyWebAPI;
 
 class SpotifySessionService {
+
+    public function __construct(
+        private bool $autoRefreh = true,
+        private bool $autoRetry = true,
+    ) {
+    }
+
     public function instantiateSession() {
-        $token = SessionLaravel::get('spotify_token');
-        $spot_sess = new SpotifyWebAPI(
-            [
-                'auto_refresh' => true, 
-                'auto_retry' => true
-            ]
+        $spotifyTokens = SpotifyToken::latest()->first();
+        $accessToken = $spotifyTokens->access_token;
+        $refreshToken = $spotifyTokens->refresh_token;
+
+        $options = [
+            'auto_refresh' => $this->autoRefreh, 
+            'auto_retry' => $this->autoRetry,
+        ];
+
+        $spotifySession = new Session(
+            env('SPOTIFY_CLIENT_ID'),
+            env('SPOTIFY_CLIENT_SECRET'),
+            env('REDIRECT_URI')
         );
-        $spot_sess->setAccessToken($token);
-        return $spot_sess;
+
+        if (now()->timestamp < $spotifyTokens->expiration) {
+            $spotifySession->setAccessToken($accessToken);
+            $spotifySession->setRefreshToken($refreshToken);
+        } else {
+            // проверить 'refreshAccessToken' - не работал
+            $spotifySession->refreshAccessToken($refreshToken);
+            // 
+            // $spotifySession->getAccessToken();
+            // $spotifySession->getRefreshToken();
+
+            $newAccessToken = $spotifySession->getAccessToken();
+            $newRefreshToken = $spotifySession->getRefreshToken();
+            // эта дрочь какого-то, сука, хуя возвращает 0. Заебала нахуй хуета ебаная
+            $newTokenExpiration = $spotifySession->getTokenExpiration();
+
+            $spotifyTokens->update([
+                'access_token' => $newAccessToken,
+                'refresh_token' => $newRefreshToken,
+                // 'expiration' => $spotifyTokens->expiration,
+            ]);
+        }
+        $spotifyApi = new SpotifyWebAPI($options, $spotifySession);
+
+        
+        return $spotifyApi;
     }
 }

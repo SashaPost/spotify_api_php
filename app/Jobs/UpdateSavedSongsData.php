@@ -11,7 +11,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+// use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Support\Facades\Session as SessionLaravel;
 
 
@@ -34,6 +34,8 @@ class UpdateSavedSongsData implements ShouldQueue
      *
      * @return void
      */
+
+    // change the api call in the 'handle()' method
     public function handle()
     {
         $token = SessionLaravel::get('spotify_token');
@@ -48,15 +50,18 @@ class UpdateSavedSongsData implements ShouldQueue
         while ($saved_tracks = $spot_sess->getMySavedTracks([
             'limit' => $limit,
             'offset' => $offset
-        ])) {
+        ])) 
+        {
             $all_tracks = array_merge($all_tracks, $saved_tracks->items);
             $offset += $limit;
 
-            if ($offset > $saved_tracks->total) {
+            if ($offset > $saved_tracks->total) 
+            {
                 break;
             }
         }
 
+        // shouls i make a service from the code below?
         foreach ($all_tracks as $track) {
 
             $newSong = Song::firstOrCreate(

@@ -8,32 +8,37 @@ use App\Models\User;
 use App\Models\Album;
 use App\Models\Artist;
 use App\Models\Playlist;
+use App\Models\SpotifyToken;
 use SpotifyWebAPI\Session;
 use Illuminate\Http\Request;
+use App\Services\TimeConverter;
 use SpotifyWebAPI\SpotifyWebAPI;
 use App\Jobs\UpdateSavedSongsData;
 use Illuminate\Support\Facades\DB;
+// use App\Http\Middleware\SpotifyToken;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Auth;
-// use App\Http\Middleware\SpotifyToken;
-use App\Http\Middleware\SpotifyTokenAutorefresh;
 use Illuminate\Support\Facades\Cache;
-use SpotifyWebAPI\SpotifyWebAPIException;
 // use Telegram\Bot\Laravel\Facades\Telegram;
 
-use Illuminate\Foundation\Bus\DispatchesJobs;
-use Illuminate\Routing\Controller as BaseController;
-use Illuminate\Foundation\Validation\ValidatesRequests;
+use App\Jobs\UpdateSavedPlaylistsData;
 
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Session as SessionLaravel;
+use App\Services\SpotifySessionService;
+use App\Services\CreateIfNotService;
+
+use SpotifyWebAPI\SpotifyWebAPIException;
+use Illuminate\Foundation\Bus\DispatchesJobs;
 
 // use Telegram\Bot\Api;
 
-use App\Services\TimeConverter;
-use App\Services\SpotifySessionService;
+use App\Http\Middleware\SpotifyTokenAutorefresh;
+use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Session as SessionLaravel;
 
-class SpotifyController extends BaseController
+
+
+class SpotifyController
 {
     use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
 
@@ -43,7 +48,8 @@ class SpotifyController extends BaseController
         Request $request,
         protected TimeConverter $timeConverter,
         protected SpotifyWebAPI $spotifyClient,
-        protected SpotifySessionService $spotifySessionService
+        protected SpotifySessionService $spotifySessionService,
+        protected CreateIfNotService $createIfNotService,
     ) {
         // $session = new Session(
         //     env('SPOTIFY_CLIENT_ID'),
@@ -66,6 +72,135 @@ class SpotifyController extends BaseController
             'me' => $me
         ]);
     }
+    
+    public function playlistTitles(Request $request) 
+    {
+        $session = $this->spotifySessionService->instantiateSession();
+        $playlists = $session->getMyPlaylists();
+
+        $total = $playlists->total;
+
+        return view('playlist-titles', [
+            'playlists' => $playlists,
+            'total' => $total
+        ]);
+    }
+
+    // create a job to automatically put all the user data into database
+    // after login;
+    // will trigger 'savePlaylistTracks'
+    public function savePlaylists(Request $request)
+    {
+        $api = $this->spotifySessionService->instantiateSession();
+        $playlists = $api->getMyPlaylists();
+        $total = $playlists->total;
+        
+        $limit = 50;
+        $offset = 0;
+        $all_playlists = [];
+
+        while ($playlists = $api->getMyPlaylists([
+            'limit' => $limit,
+            'offset' => $offset
+        ])) 
+        {
+            $all_playlists = array_merge($all_playlists, $playlists->items);
+            $offset += $limit;
+
+            if ($offset > $playlists->total)
+            {
+                break;
+            }
+        }
+
+        foreach ($all_playlists as $playlist)
+        {
+            // $new_playlist = Playlist::firstOrCreate(
+            //     ['spotify_id' => $playlist->id],
+            //     [
+            //         'name' => $playlist->name,
+            //         'description' => $playlist->description,
+            //         'spotify_url' => $playlist->external_urls->spotify,
+            //         'collaborative' => $playlist->collaborative,
+            //         'public' => $playlist->public,
+            //         'total_tracks' => $playlist->tracks->total,
+            //         'owner_id' => $playlist->owner->id
+            //     ]
+            // );
+            $new_playlist = $this->createIfNotService->playlist($playlist);
+            $new_playlist->save();
+        }
+
+        $fetched_playlists = Playlist::all();
+
+        return view('save-my-playlists', [
+            'total' => $total,
+            'playlists' => $playlists,
+            'all_playlists' => $all_playlists,
+            'fetched_playlists' => $fetched_playlists
+        ]);
+    }
+
+    // make job from this - done
+    // check the job 'UpdatePlaylistTracksData'
+    public function savePlaylistTracks(
+        Request $request,
+        // $playlistSpotifyId
+    )
+    {
+        $api = $this->spotifySessionService->instantiateSession();   // not in use 'cause 'UpdateSavedPlaylistsData' shoud perform this;
+        // job is not working yet (something wrong with the construct method)
+        // fixed
+        UpdateSavedPlaylistsData::dispatch();
+
+        // $fetched_playlists = Playlist::all();
+
+        // $playlist = Playlist::latest()->first();
+        $playlist = Playlist::latest()->skip(1)->first();
+
+        $playlist_tracks = $api->getPlaylistTracks($playlist['spotify_id']);
+
+        $limit = 50;
+        $offset = 0;
+        $total = $playlist_tracks->total;
+
+        $tracks = [];
+
+        while ($playlist_tracks = $api->getPlaylistTracks($playlist['spotify_id'], [
+            'limit' => $limit,
+            'offset' => $offset
+        ]))
+        {
+            $tracks = array_merge($tracks, $playlist_tracks->items);
+            $offset += $limit;
+
+            if ($offset > $total)
+            {
+                break;
+            }
+        }
+
+        foreach ($tracks as $track)
+        {
+            $newSong = $this->createIfNotService->songFromSong($track);
+            
+            $newArtist = $this->createIfNotService->artistFromSong($track);
+            $newSong->artist()->associate($newArtist);
+
+            $newAlbum = $this->createIfNotService->albumFromSong($track);
+            $newSong->album()->associate($newAlbum);
+
+            $playlist->songs()->syncWithoutDetaching($newSong);
+            $playlist->artists()->syncWithoutDetaching($newArtist);
+
+            $newSong->save();
+        }
+        return $playlist->songs;
+    }
+
+    // public function 
+
+
 
     public function auth(Request $request)
     {
@@ -88,27 +223,40 @@ class SpotifyController extends BaseController
 
         return redirect($session->getAuthorizeUrl($options));
     }
-
-
-
-    public function token(Request $request)
-    {
-        if (1) {
-        }
-        return SessionLaravel::get('spotify_token');
-    }
-
+    
     public function renderToken(Request $request)
     {
-        $token = SessionLaravel::get('spotify_token');
-        
-        $session_keys = dump(SessionLaravel::all());
+        // $token = SessionLaravel::get('spotify_token');
+        // dump(SessionLaravel::all());   
 
+        // dump(SpotifyToken::latest()->first());
+
+        $tokens = SpotifyToken::latest()->first();
+        
         return view('template-test', [
-            'token' => $token,
-            'session' => $session_keys
+            'tokens' => $tokens,
         ]);
     }
+    
+    public function getSavedTracksToDatabase(Request $request)
+    {   
+        UpdateSavedSongsData::dispatch();
+
+        $tracks = Song::all();
+
+        return view('save-my-tracks', [
+            'tracks' => $tracks,
+        ]);
+    }
+
+
+
+    // public function token(Request $request)
+    // {
+    //     if (1) {
+    //     }
+    //     return SessionLaravel::get('spotify_token');
+    // }
 
     // needs improvement
     // doesn't even show the length of playlist
@@ -120,11 +268,62 @@ class SpotifyController extends BaseController
 
         // set in the SpotifyToken middleware after /auth
         /** @see SpotifyToken */
-        $token = SessionLaravel::get('spotify_token');
-        $spot_sess = new SpotifyWebAPI();
-        $spot_sess->setAccessToken($token);
+        $spotifyTokens = SpotifyToken::find(1);
 
-        $playlists = $spot_sess->getMyPlaylists();
+        $accessToken = $spotifyTokens->access_token;
+
+        if ((string)now() < $spotifyTokens->expiration) {
+            $session = new Session(
+                'CLIENT_ID',
+                'CLIENT_SECRET',
+                'REDIRECT_URI'
+            );
+
+            $session->refreshAccessToken($spotifyTokens->refresh_token);
+
+            $accessToken = $session->getAccessToken();
+
+            $spotifyTokens->update([
+                'access_token' => $accessToken,
+                'refresh_token' => $session->getRefreshToken(),
+                'expiration' => $session->getTokenExpiration(),
+            ]);
+        }
+
+
+        
+        $spot_sess = new SpotifyWebAPI();
+        $spot_sess->setAccessToken($accessToken);
+
+
+
+
+        // $spot_sess->setRefreshToken($spotifyTokens->refresh_token);
+        // $spot_sess->setSession($session);
+
+        try {
+            $playlists = $spot_sess->getMyPlaylists();
+        } catch(SpotifyWebAPIException $e) {
+            if ($e->hasExpiredToken()) {
+                $session = new Session(
+                    'CLIENT_ID',
+                    'CLIENT_SECRET',
+                    'REDIRECT_URI'
+                );
+    
+                $session->refreshAccessToken($spotifyTokens->refresh_token);
+    
+                $accessToken = $session->getAccessToken();
+    
+                $spotifyTokens->update([
+                    'access_token' => $accessToken,
+                    'refresh_token' => $session->getRefreshToken(),
+                    'expiration' => $session->getTokenExpiration(),
+                ]);
+            }
+
+            $playlists = $spot_sess->getMyPlaylists();
+        }
 
         $playlistsFormatted = [];
 
@@ -241,17 +440,6 @@ class SpotifyController extends BaseController
 
         return view('my-tracks', [
             'tracks_properties' => $tracks_properties
-        ]);
-    }
-
-    public function getSavedTracksToDatabase(Request $request)
-    {   
-        UpdateSavedSongsData::dispatch();
-
-        $tracks = Song::all();
-
-        return view('save-my-tracks', [
-            'tracks' => $tracks,
         ]);
     }
 

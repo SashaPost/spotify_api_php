@@ -61,4 +61,14 @@ class User extends Authenticatable
     {
         return $this->belongsToMany('App\Artist', 'user_artists', 'user_id', 'artist_id');
     }
+
+    public function spotify_tokens()
+    {
+        return $this->hasOne('App\SpotifyTokens');
+    }
+
+    public function isSpotifyAuthorized()
+    {
+        return false; //(bool)$this->spotify_tokens;
+    }
 }

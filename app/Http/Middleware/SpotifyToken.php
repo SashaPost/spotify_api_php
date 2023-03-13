@@ -29,4 +29,4 @@ class SpotifyToken
         }
         return $next($request);
     }
-}
+}   

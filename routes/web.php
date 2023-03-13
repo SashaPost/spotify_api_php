@@ -1,10 +1,11 @@
 <?php
 
 use SpotifyWebAPI\Session;
+use App\Models\SpotifyToken;
 use Illuminate\Http\Request;
 use SpotifyWebAPI\SpotifyWebAPI;
-use App\Http\Controllers\Controller;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SpotifyController;
 
@@ -33,15 +34,74 @@ Route::get('my-albums', [SpotifyController::class, 'myAlbums']);
 // home page:
 Route::get('index', function () {
     return view('index');
-});
+})->name('index');
 
 // under construction:
 Route::get('my-tracks', [SpotifyController::class, 'myLikedSongs']);
 
+// now in progress:
+Route::get('playlist-titles', [SpotifyController::class, 'playlistTitles']);
+
 // get 'my saved tracks' to the database
 Route::get('save-my-tracks', [SpotifyController::class, 'getSavedTracksToDatabase']);
 
-Route::get('test-the-bot', [SpotifyController::class, 'testTgBot']);
+Route::get('save-my-playlists', [SpotifyController::class, 'savePlaylists']);
+Route::get('save-playlist-tracks', [SpotifyController::class, 'savePlaylistTracks']);
+
+Route::get('/dashboard', function() {
+    return view('dashboard', ['user' => auth()->user()]);
+})->name('dashboard');
+
+Route::get('spotify-code', function(Request $request) {
+    
+    $session = new Session(
+        env('SPOTIFY_CLIENT_ID'),
+        env('SPOTIFY_CLIENT_SECRET'),
+        env('REDIRECT_URI')
+    );
+
+    $code = $request->get('code');
+
+    // code is used to get access token
+    $session->requestAccessToken($code);
+    
+    SpotifyToken::firstOrCreate(
+        [
+            'code' => $code
+        ],
+        [
+            'access_token' => $session->getAccessToken(),
+            'refresh_token' => $session->getRefreshToken(),
+            'expiration' => $session->getTokenExpiration(),
+        ]
+    );
+
+    return redirect(route('dashboard'));
+});
+
+Route::post('spotify-authorize', function() {
+    $session = new Session(
+        env('SPOTIFY_CLIENT_ID'),
+        env('SPOTIFY_CLIENT_SECRET'),
+        env('REDIRECT_URI')
+    );
+
+    $options = [
+        'scope' => [
+            'playlist-read-private',
+            'user-read-private',
+            'user-read-email',
+            'playlist-read-collaborative',
+            'user-follow-read',
+            'user-library-read'
+        ]
+    ];
+
+    return redirect($session->getAuthorizeUrl($options));
+    
+});
+
+// Route::get('test-the-bot', [SpotifyController::class, 'testTgBot']);
 
 
 

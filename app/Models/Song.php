@@ -28,7 +28,6 @@ class Song extends Model
     //     // or the update method to assign values to the 
     //     // listed attributes in a single line, 
     //     // rather than setting each attribute individually
-    //     'name', 
     // ];
     public function artist() 
     {
