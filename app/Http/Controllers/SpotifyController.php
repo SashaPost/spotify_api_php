@@ -3,26 +3,25 @@
 namespace App\Http\Controllers;
 
 use Exception;
+
 use App\Models\Song;
 use App\Models\User;
 use App\Models\Album;
 use App\Models\Artist;
 use App\Models\Playlist;
 use App\Models\SpotifyToken;
+use App\Models\PlaylistDuration;
+
 use SpotifyWebAPI\Session;
 use Illuminate\Http\Request;
-use App\Services\TimeConverter;
 use SpotifyWebAPI\SpotifyWebAPI;
-use App\Jobs\UpdateSavedSongsData;
 use Illuminate\Support\Facades\DB;
-// use App\Http\Middleware\SpotifyToken;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-// use Telegram\Bot\Laravel\Facades\Telegram;
 
-use App\Jobs\UpdateSavedPlaylistsData;
 
+use App\Services\TimeConverter;
 use App\Services\SpotifySessionService;
 use App\Services\CreateIfNotService;
 
@@ -30,11 +29,18 @@ use SpotifyWebAPI\SpotifyWebAPIException;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 
 // use Telegram\Bot\Api;
+// use App\Http\Middleware\SpotifyToken;
+// use Telegram\Bot\Laravel\Facades\Telegram;
+// use App\Http\Middleware\SpotifyTokenAutorefresh;
 
-use App\Http\Middleware\SpotifyTokenAutorefresh;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Session as SessionLaravel;
+
+use App\Jobs\UpdateSavedSongsData;
+use App\Jobs\UpdateSavedPlaylistsData;
+use App\Jobs\UpdatePlaylistTracksData;
+use App\Jobs\UpdatePlaylistDuration;
 
 
 
@@ -51,28 +57,9 @@ class SpotifyController
         protected SpotifySessionService $spotifySessionService,
         protected CreateIfNotService $createIfNotService,
     ) {
-        // $session = new Session(
-        //     env('SPOTIFY_CLIENT_ID'),
-        //     env('SPOTIFY_CLIENT_SECRET'),
-        //     env('REDIRECT_URI')
-        // );
-
-        // $options = [
-        //     'scope' => [
-        //         'playlist-read-private',
-        //         'user-read-private'
-        //     ],
-        // ];
+        
     }
-    public function test(Request $request)
-    {
-        $session = $this->spotifySessionService->instantiateSession();
-        $me = $session->me();
-        return view('test', [
-            'me' => $me
-        ]);
-    }
-    
+        
     public function playlistTitles(Request $request) 
     {
         $session = $this->spotifySessionService->instantiateSession();
@@ -115,20 +102,7 @@ class SpotifyController
 
         foreach ($all_playlists as $playlist)
         {
-            // $new_playlist = Playlist::firstOrCreate(
-            //     ['spotify_id' => $playlist->id],
-            //     [
-            //         'name' => $playlist->name,
-            //         'description' => $playlist->description,
-            //         'spotify_url' => $playlist->external_urls->spotify,
-            //         'collaborative' => $playlist->collaborative,
-            //         'public' => $playlist->public,
-            //         'total_tracks' => $playlist->tracks->total,
-            //         'owner_id' => $playlist->owner->id
-            //     ]
-            // );
             $new_playlist = $this->createIfNotService->playlist($playlist);
-            $new_playlist->save();
         }
 
         $fetched_playlists = Playlist::all();
@@ -192,13 +166,93 @@ class SpotifyController
 
             $playlist->songs()->syncWithoutDetaching($newSong);
             $playlist->artists()->syncWithoutDetaching($newArtist);
-
-            $newSong->save();
         }
         return $playlist->songs;
     }
 
-    // public function 
+
+    public function test(Request $request)
+    {
+        $api = $this->spotifySessionService->instantiateSession();
+        $me = $api->me();
+        
+        $playlistsSpotify = $api->getMyPlaylists();
+        
+        $playlists = Playlist::all();
+        
+        $playlist = Playlist::latest()->first();
+
+        UpdatePlaylistDuration::dispatch($playlist->spotify_id);
+
+        $playlistSongs = $playlist->songs;
+        // foreach $playlistSongs $totalDuration += $song->duration_ms
+        $totalDurationMs = 0;
+        foreach ($playlistSongs as $song)
+        {
+            $totalDurationMs += $song->duration_ms;
+        }
+
+        $playlistDuration = $this->createIfNotService->playlistDuration($playlist->id, $totalDurationMs);
+
+        $pD = $playlist->duration;
+
+        return view('test', [
+            'me' => $me,
+            // 'playlists' => $playlistsSpotify,
+        ]);
+    }
+
+    // made a route out of this:
+    public function myPlaylists(Request $request) 
+    {
+        UpdateSavedPlaylistsData::dispatch();
+        
+        $playlists = Playlist::all();
+        $totalCount = Playlist::count();
+        // $playlists = Playlist::paginate(30);
+
+        return view('my-playlists', [
+            'playlists' => $playlists,
+            'totalCount' => $totalCount,
+        ]);
+    }
+
+    public function renderPlaylist(
+        Request $request,
+        $playlistId,
+    )
+    {   
+        // add a check to dispatch 'UpdatePlaylistTracksData':
+        UpdatePlaylistTracksData::dispatch($playlistId);
+        
+        $playlist = Playlist::where('id', $playlistId)->first();
+        $playlistSongs = $playlist->songs;
+        // $playlistDuration = $playlist->duration->duration_ms;
+
+        // not sure if need this (dispatches in 'UpdateSavedPlaylistsData')
+        if($playlist->duration === null)
+        {
+            UpdatePlaylistDuration::dispatch($playlistId);
+        }
+        // correct this if needed:
+        // try {
+            //     $fetchedPlaylist->duration;
+            // } catch (Throwable $e) {
+            //     UpdatePlaylistDuration::dispatch($playlistId);
+            // }
+
+        // $playlistDuration = PlaylistDuration::where('playlist_id', $playlistId)->first();
+        $playlistDuration = $playlist->duration;
+
+        return view('playlist-songs', [
+            'name' => $playlist->name,
+            'description' => $playlist->description,
+            'total_tracks' => $playlist->total_tracks,
+            'duration' => $playlistDuration->duration_ms,
+
+            'playlistSongs' => $playlistSongs,
+        ]);
+    }
 
 
 
@@ -263,96 +317,96 @@ class SpotifyController
     // or would be even better to write another method
     // to render the full playlist's contents and other info
     // and the other one to list all playlists and redirects to previous after choosing one of them
-    public function myPlaylists(Request $request)
-    {
+    // public function myPlaylists(Request $request)
+    // {
 
-        // set in the SpotifyToken middleware after /auth
-        /** @see SpotifyToken */
-        $spotifyTokens = SpotifyToken::find(1);
+    //     // set in the SpotifyToken middleware after /auth
+    //     /** @see SpotifyToken */
+    //     $spotifyTokens = SpotifyToken::find(1);
 
-        $accessToken = $spotifyTokens->access_token;
+    //     $accessToken = $spotifyTokens->access_token;
 
-        if ((string)now() < $spotifyTokens->expiration) {
-            $session = new Session(
-                'CLIENT_ID',
-                'CLIENT_SECRET',
-                'REDIRECT_URI'
-            );
+    //     if ((string)now() < $spotifyTokens->expiration) {
+    //         $session = new Session(
+    //             'CLIENT_ID',
+    //             'CLIENT_SECRET',
+    //             'REDIRECT_URI'
+    //         );
 
-            $session->refreshAccessToken($spotifyTokens->refresh_token);
+    //         $session->refreshAccessToken($spotifyTokens->refresh_token);
 
-            $accessToken = $session->getAccessToken();
+    //         $accessToken = $session->getAccessToken();
 
-            $spotifyTokens->update([
-                'access_token' => $accessToken,
-                'refresh_token' => $session->getRefreshToken(),
-                'expiration' => $session->getTokenExpiration(),
-            ]);
-        }
+    //         $spotifyTokens->update([
+    //             'access_token' => $accessToken,
+    //             'refresh_token' => $session->getRefreshToken(),
+    //             'expiration' => $session->getTokenExpiration(),
+    //         ]);
+    //     }
 
 
         
-        $spot_sess = new SpotifyWebAPI();
-        $spot_sess->setAccessToken($accessToken);
+    //     $spot_sess = new SpotifyWebAPI();
+    //     $spot_sess->setAccessToken($accessToken);
 
 
 
 
-        // $spot_sess->setRefreshToken($spotifyTokens->refresh_token);
-        // $spot_sess->setSession($session);
+    //     // $spot_sess->setRefreshToken($spotifyTokens->refresh_token);
+    //     // $spot_sess->setSession($session);
 
-        try {
-            $playlists = $spot_sess->getMyPlaylists();
-        } catch(SpotifyWebAPIException $e) {
-            if ($e->hasExpiredToken()) {
-                $session = new Session(
-                    'CLIENT_ID',
-                    'CLIENT_SECRET',
-                    'REDIRECT_URI'
-                );
+    //     try {
+    //         $playlists = $spot_sess->getMyPlaylists();
+    //     } catch(SpotifyWebAPIException $e) {
+    //         if ($e->hasExpiredToken()) {
+    //             $session = new Session(
+    //                 'CLIENT_ID',
+    //                 'CLIENT_SECRET',
+    //                 'REDIRECT_URI'
+    //             );
     
-                $session->refreshAccessToken($spotifyTokens->refresh_token);
+    //             $session->refreshAccessToken($spotifyTokens->refresh_token);
     
-                $accessToken = $session->getAccessToken();
+    //             $accessToken = $session->getAccessToken();
     
-                $spotifyTokens->update([
-                    'access_token' => $accessToken,
-                    'refresh_token' => $session->getRefreshToken(),
-                    'expiration' => $session->getTokenExpiration(),
-                ]);
-            }
+    //             $spotifyTokens->update([
+    //                 'access_token' => $accessToken,
+    //                 'refresh_token' => $session->getRefreshToken(),
+    //                 'expiration' => $session->getTokenExpiration(),
+    //             ]);
+    //         }
 
-            $playlists = $spot_sess->getMyPlaylists();
-        }
+    //         $playlists = $spot_sess->getMyPlaylists();
+    //     }
 
-        $playlistsFormatted = [];
+    //     $playlistsFormatted = [];
 
-        foreach ($playlists->items as $playlist) {
-            // pick up cached tracks for playlist to avoid requests for each playlist all the time
-            $tracks = Cache::get($playlist->id);
+    //     foreach ($playlists->items as $playlist) {
+    //         // pick up cached tracks for playlist to avoid requests for each playlist all the time
+    //         $tracks = Cache::get($playlist->id);
 
-            if (!$tracks) {
-                $playlistTracks = $spot_sess->getPlaylistTracks($playlist->id);
-                $tracks = $playlistTracks->items;
-                // putting tracks from playlist into cache identified by playlist ID
-                Cache::set($playlist->id, $tracks);
-            }
+    //         if (!$tracks) {
+    //             $playlistTracks = $spot_sess->getPlaylistTracks($playlist->id);
+    //             $tracks = $playlistTracks->items;
+    //             // putting tracks from playlist into cache identified by playlist ID
+    //             Cache::set($playlist->id, $tracks);
+    //         }
 
-            $playlistsFormatted[] = [
-                'name' => $playlist->name,
-                'tracks' => $tracks
-            ];
-        }
+    //         $playlistsFormatted[] = [
+    //             'name' => $playlist->name,
+    //             'tracks' => $tracks
+    //         ];
+    //     }
 
-        // added by me:
-        $my_acc = $spot_sess->me();
-        $my_name = $my_acc->display_name;
+    //     // added by me:
+    //     $my_acc = $spot_sess->me();
+    //     $my_name = $my_acc->display_name;
 
-        return view('playlists', [
-            'playlists' => $playlistsFormatted,
-            'my_name' => $my_name
-        ]);
-    }
+    //     return view('playlists', [
+    //         'playlists' => $playlistsFormatted,
+    //         'my_name' => $my_name
+    //     ]);
+    // }
 
     public function myAlbums(Request $request)
     {

@@ -4,16 +4,18 @@ namespace App\Jobs;
 
 // use Illuminate\Http\Client\Request;
 
+use App\Models\Playlist;
+use App\Services\CreateIfNotService;
+use App\Services\SpotifySessionService;
+
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
-
-use App\Models\Playlist;
-use App\Services\SpotifySessionService;
+use Throwable;
 
 class UpdateSavedPlaylistsData implements ShouldQueue
 {
@@ -38,7 +40,8 @@ class UpdateSavedPlaylistsData implements ShouldQueue
      * @return void
      */
     public function handle(
-        SpotifySessionService $spotifySessionService
+        SpotifySessionService $spotifySessionService,
+        CreateIfNotService $createIfNotService,
     )
     {
         // 
@@ -67,19 +70,23 @@ class UpdateSavedPlaylistsData implements ShouldQueue
 
         foreach ($all_playlists as $playlist)
         {
-            $new_playlist = Playlist::firstOrCreate(
-                ['spotify_id' => $playlist->id],
-                [
-                    'name' => $playlist->name,
-                    'description' => $playlist->description,
-                    'spotify_url' => $playlist->external_urls->spotify,
-                    'collaborative' => $playlist->collaborative,
-                    'public' => $playlist->public,
-                    'total_tracks' => $playlist->tracks->total,
-                    'owner_id' => $playlist->owner->id
-                ]
-            );
-            $new_playlist->save();
+            // trigger here 'UpdatePlaylistDuration'
+            $new_playlist = $createIfNotService->playlist($playlist);
+
+            $fetchedPlaylist = Playlist::where('spotify_id', $playlist->id)->first();
+
+            if($fetchedPlaylist->duration === null)
+            {
+                UpdatePlaylistDuration::dispatch($fetchedPlaylist->id);
+            }
+            // $test = $fetchedPlaylist->duration->duration_ms;
+            // $secondTest = $fetchedPlaylist->duration;
+
+            // try {
+            //     $fetchedPlaylist->duration;
+            // } catch (Throwable $e) {
+            //     UpdatePlaylistDuration::dispatch($fetchedPlaylist->id);
+            // }
         }
     }
 }

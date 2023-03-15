@@ -5,7 +5,10 @@
 @endif --}}
 
 <form action="/spotify-authorize" method="POST">
-    <button>Authorize spotify</button>
     @csrf
+    <button>Authorize spotify</button>
 </form>
 
+<ul>
+    <a href="{{ route('playlists') }}">Playlists</a>
+</ul>

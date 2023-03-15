@@ -6,6 +6,7 @@ use App\Models\Song;
 use App\Models\Album;
 use App\Models\Artist;
 use App\Models\Playlist;
+use App\Models\PlaylistDuration;
 
 class CreateIfNotService
 {
@@ -15,6 +16,8 @@ class CreateIfNotService
     }
 
     // specify '$track' as a stdClass object
+    // change the methods provided just to array
+    // and add all of them as a class properties
     public function songFromSong($track)
     {
         return Song::firstOrCreate(
@@ -70,6 +73,14 @@ class CreateIfNotService
                 'total_tracks' => $playlist->tracks->total,
                 'owner_id' => $playlist->owner->id
             ]
+        );
+    }
+
+    public function playlistDuration($playlistId, $totalDurationMs)
+    {
+        return PlaylistDuration::firstOrCreate(
+            ['playlist_id' => $playlistId],
+            ['duration_ms' => $totalDurationMs]
         );
     }
 }

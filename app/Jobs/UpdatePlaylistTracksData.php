@@ -2,14 +2,17 @@
 
 namespace App\Jobs;
 
+use App\Models\Song;
+
+use App\Models\Album;
+use App\Models\Artist;
+
 use App\Models\Playlist;
+use Illuminate\Bus\Queueable;
 
 use App\Services\CreateIfNotService;
-use App\Services\SpotifySessionService;
-
-use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
-
+use App\Services\SpotifySessionService;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -24,9 +27,14 @@ class UpdatePlaylistTracksData implements ShouldQueue
      *
      * @return void
      */
-    public function __construct()
+
+    public $playlistId;
+    public function __construct(
+        $playlistId,
+    )
     {
         //
+        $this->playlistId = $playlistId;
     }
 
     /**
@@ -37,14 +45,14 @@ class UpdatePlaylistTracksData implements ShouldQueue
     public function handle(
         SpotifySessionService $spotifySessionService,
         CreateIfNotService $createIfNotService,
-        $playlistId
+        // $playlistId
     )
     {
         //
-        $playlist = Playlist::where('id', $playlistId)->first();
+        $playlist = Playlist::where('id', $this->playlistId)->first();
 
         $api = $spotifySessionService->instantiateSession();
-        $playlist_tracks = $api->getPlaylistTracks($playlistId);
+        $playlist_tracks = $api->getPlaylistTracks($playlist->spotify_id);
 
         $limit = 50;
         $offset = 0;
@@ -52,7 +60,7 @@ class UpdatePlaylistTracksData implements ShouldQueue
 
         $tracks = [];
 
-        while ($playlist_tracks = $api->getPlaylistTracks($playlistId, [
+        while ($playlist_tracks = $api->getPlaylistTracks($playlist->spotify_id, [
             'limit' => $limit,
             'offset' => $offset
         ]))
@@ -69,15 +77,46 @@ class UpdatePlaylistTracksData implements ShouldQueue
         foreach ($tracks as $track)
         {
             $newSong = $createIfNotService->songFromSong($track);
+            // $newSong = Song::firstOrCreate(
+            //     ['spotify_id' => $track->track?->id],
+            //     [
+            //         'name' => $track->track?->name,
+            //         'duration_ms' => $track->track?->duration_ms,
+            //         'spotify_url' => $track->track?->uri,
+            //         'isrc' => $track->track?->external_ids->isrc,
+            //         'added_at' => $track->added_at
+            //     ]
+            // );
 
-            $newArtist = $createIfNotService->artistFromSong($track);    
+            $newArtist = $createIfNotService->artistFromSong($track);  
+            // $newArtist = Artist::firstOrCreate(
+            //     ['spotify_id' => $track->track?->artists[0]->id],
+            //     [
+            //         'name' => $track->track?->artists[0]->name,
+            //         'spotify_url' => $track->track?->artists[0]->external_urls->spotify
+            //     ]
+            // );
             $newSong->artist()->associate($newArtist);
 
             $newAlbum = $createIfNotService->albumFromSong($track);
+            // $artist = Artist::where('spotify_id', $track->track?->artists[0]->id)->first();
+            // $artistId = $artist->id;
+            // $newAlbum = Album::firstOrCreate(
+            //     ['spotify_id' => $track->track?->album->id],
+            //     [
+            //         'name' => $track->track?->album->name,
+            //         'release_date' => $track->track?->album->release_date,
+            //         'artist' => $track->track?->artists[0]->name,
+            //         'spotify_url' => $track->track?->album->external_urls->spotify,
+            //         'total_tracks' => $track->track?->album->total_tracks,
+            //         'artist_id' => $artistId
+            //     ]
+            // );
             $newSong->album()->associate($newAlbum);
 
             $playlist->songs()->syncWithoutDetaching($newSong);
             $playlist->artists()->syncWithoutDetaching($newArtist);
+            // $playlist->owners()->;
 
             $newSong->save();
         }

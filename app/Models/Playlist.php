@@ -39,4 +39,9 @@ class Playlist extends Model
     {
         return $this->belongsToMany(Artist::class, 'playlist_artists', 'playlist_id', 'artist_id');
     }
+
+    public function duration()
+    {
+        return $this->hasOne(PlaylistDuration::class, 'playlist_id');
+    }
 }
