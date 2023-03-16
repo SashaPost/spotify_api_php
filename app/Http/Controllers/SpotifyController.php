@@ -59,7 +59,138 @@ class SpotifyController
     ) {
         
     }
+    
+    // works fine:
+    public function myPlaylists(Request $request) 
+    {
+        UpdateSavedPlaylistsData::dispatch();
         
+        $playlists = Playlist::all();
+        $totalCount = Playlist::count();
+        // $playlists = Playlist::paginate(30);
+
+        return view('my-playlists', [
+            'playlists' => $playlists,
+            'totalCount' => $totalCount,
+        ]);
+    }
+
+    public function renderPlaylist(
+        Request $request,
+        $playlistId,
+    )
+    {   
+        // add a check to dispatch 'UpdatePlaylistTracksData':
+        UpdatePlaylistTracksData::dispatch($playlistId);
+        
+        $playlist = Playlist::where('id', $playlistId)->first();
+        $playlistSongs = $playlist->songs;
+        // $playlistDuration = $playlist->duration->duration_ms;
+
+        // not sure if need this (dispatches in 'UpdateSavedPlaylistsData')
+        if($playlist->duration === null)
+        {
+            UpdatePlaylistDuration::dispatch($playlistId);
+        }
+        // correct this if needed:
+        // try {
+            //     $fetchedPlaylist->duration;
+            // } catch (Throwable $e) {
+            //     UpdatePlaylistDuration::dispatch($playlistId);
+            // }
+
+        // $playlistDuration = PlaylistDuration::where('playlist_id', $playlistId)->first();
+        $playlistDuration = $playlist->duration;
+
+        return view('playlist-songs', [
+            'name' => $playlist->name,
+            'description' => $playlist->description,
+            'total_tracks' => $playlist->total_tracks,
+            'duration' => $playlistDuration->duration_ms,
+
+            'playlistSongs' => $playlistSongs,
+        ]);
+    }
+
+
+
+    // new tests here:
+    public function test(Request $request)
+    {
+        $api = $this->spotifySessionService->instantiateSession();
+        $me = $api->me();
+        
+        $playlistsSpotify = $api->getMyPlaylists();
+        
+        $playlists = Playlist::all();
+        
+        $playlist = Playlist::latest()->first();
+
+        UpdatePlaylistDuration::dispatch($playlist->spotify_id);
+
+        $playlistSongs = $playlist->songs;
+        // foreach $playlistSongs $totalDuration += $song->duration_ms
+        $totalDurationMs = 0;
+        foreach ($playlistSongs as $song)
+        {
+            $totalDurationMs += $song->duration_ms;
+        }
+
+        $playlistDuration = $this->createIfNotService->playlistDuration($playlist->id, $totalDurationMs);
+
+        $pD = $playlist->duration;
+
+        return view('test', [
+            'me' => $me,
+            // 'playlists' => $playlistsSpotify,
+        ]);
+    }
+
+    public function myAlbums(Request $request)
+    {
+        $token = SessionLaravel::get('spotify_token');
+        $spot_sess = new SpotifyWebAPI();
+        $spot_sess->setAccessToken($token);
+        
+        $limit = 50;
+        $offset = 0;
+        $albums = [];
+
+        while ($response = $spot_sess->getMySavedAlbums([
+            'limit' => $limit,
+            'offset' => $offset
+        ])) {
+            $albums = array_merge($albums, $response->items);
+            // break;
+            $offset += $limit;
+
+            if ($offset > $response->total) {
+                break;
+            }
+        }
+
+        return view('my-albums', [
+            'albums' => $albums
+            // 'test' => $test
+        ]);
+    }
+
+
+
+    public function renderToken(Request $request)
+    {
+        // $token = SessionLaravel::get('spotify_token');
+        // dump(SessionLaravel::all());   
+
+        // dump(SpotifyToken::latest()->first());
+
+        $tokens = SpotifyToken::latest()->first();
+        
+        return view('template-test', [
+            'tokens' => $tokens,
+        ]);
+    }
+    
     public function playlistTitles(Request $request) 
     {
         $session = $this->spotifySessionService->instantiateSession();
@@ -170,92 +301,6 @@ class SpotifyController
         return $playlist->songs;
     }
 
-
-    public function test(Request $request)
-    {
-        $api = $this->spotifySessionService->instantiateSession();
-        $me = $api->me();
-        
-        $playlistsSpotify = $api->getMyPlaylists();
-        
-        $playlists = Playlist::all();
-        
-        $playlist = Playlist::latest()->first();
-
-        UpdatePlaylistDuration::dispatch($playlist->spotify_id);
-
-        $playlistSongs = $playlist->songs;
-        // foreach $playlistSongs $totalDuration += $song->duration_ms
-        $totalDurationMs = 0;
-        foreach ($playlistSongs as $song)
-        {
-            $totalDurationMs += $song->duration_ms;
-        }
-
-        $playlistDuration = $this->createIfNotService->playlistDuration($playlist->id, $totalDurationMs);
-
-        $pD = $playlist->duration;
-
-        return view('test', [
-            'me' => $me,
-            // 'playlists' => $playlistsSpotify,
-        ]);
-    }
-
-    // made a route out of this:
-    public function myPlaylists(Request $request) 
-    {
-        UpdateSavedPlaylistsData::dispatch();
-        
-        $playlists = Playlist::all();
-        $totalCount = Playlist::count();
-        // $playlists = Playlist::paginate(30);
-
-        return view('my-playlists', [
-            'playlists' => $playlists,
-            'totalCount' => $totalCount,
-        ]);
-    }
-
-    public function renderPlaylist(
-        Request $request,
-        $playlistId,
-    )
-    {   
-        // add a check to dispatch 'UpdatePlaylistTracksData':
-        UpdatePlaylistTracksData::dispatch($playlistId);
-        
-        $playlist = Playlist::where('id', $playlistId)->first();
-        $playlistSongs = $playlist->songs;
-        // $playlistDuration = $playlist->duration->duration_ms;
-
-        // not sure if need this (dispatches in 'UpdateSavedPlaylistsData')
-        if($playlist->duration === null)
-        {
-            UpdatePlaylistDuration::dispatch($playlistId);
-        }
-        // correct this if needed:
-        // try {
-            //     $fetchedPlaylist->duration;
-            // } catch (Throwable $e) {
-            //     UpdatePlaylistDuration::dispatch($playlistId);
-            // }
-
-        // $playlistDuration = PlaylistDuration::where('playlist_id', $playlistId)->first();
-        $playlistDuration = $playlist->duration;
-
-        return view('playlist-songs', [
-            'name' => $playlist->name,
-            'description' => $playlist->description,
-            'total_tracks' => $playlist->total_tracks,
-            'duration' => $playlistDuration->duration_ms,
-
-            'playlistSongs' => $playlistSongs,
-        ]);
-    }
-
-
-
     public function auth(Request $request)
     {
         $session = new Session(
@@ -277,21 +322,7 @@ class SpotifyController
 
         return redirect($session->getAuthorizeUrl($options));
     }
-    
-    public function renderToken(Request $request)
-    {
-        // $token = SessionLaravel::get('spotify_token');
-        // dump(SessionLaravel::all());   
-
-        // dump(SpotifyToken::latest()->first());
-
-        $tokens = SpotifyToken::latest()->first();
         
-        return view('template-test', [
-            'tokens' => $tokens,
-        ]);
-    }
-    
     public function getSavedTracksToDatabase(Request $request)
     {   
         UpdateSavedSongsData::dispatch();
@@ -407,35 +438,6 @@ class SpotifyController
     //         'my_name' => $my_name
     //     ]);
     // }
-
-    public function myAlbums(Request $request)
-    {
-        $token = SessionLaravel::get('spotify_token');
-        $spot_sess = new SpotifyWebAPI();
-        $spot_sess->setAccessToken($token);
-        
-        $limit = 50;
-        $offset = 0;
-        $albums = [];
-
-        while ($response = $spot_sess->getMySavedAlbums([
-            'limit' => $limit,
-            'offset' => $offset
-        ])) {
-            $albums = array_merge($albums, $response->items);
-            // break;
-            $offset += $limit;
-
-            if ($offset > $response->total) {
-                break;
-            }
-        }
-
-        return view('my-albums', [
-            'albums' => $albums
-            // 'test' => $test
-        ]);
-    }
 
     // created a Job for that:
     public function myLikedSongs(Request $request)

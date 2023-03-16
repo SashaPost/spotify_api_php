@@ -1,19 +1,12 @@
 <?php
 
-use App\Models\Song;
-use App\Models\User;
-use App\Models\Album;
-use App\Models\Artist;
-use App\Models\Playlist;
-use App\Models\SpotifyToken;
-
 use SpotifyWebAPI\Session;
+use App\Models\SpotifyToken;
+use Illuminate\Http\Request;
 use SpotifyWebAPI\SpotifyWebAPI;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SpotifyController;
 
 
@@ -28,22 +21,39 @@ use App\Http\Controllers\SpotifyController;
 |
 */
 
-// tests:
-Route::get('/', function () {
-    return view('welcome');
-});
-Route::get('test', [SpotifyController::class, 'test']);
-// was a part of an old middleware
+// etu huietu snova perekomponovat':
+
+// first:
+Route::get('auth', [SpotifyController::class, 'auth', 'auth']);
+
+// redirects here:
 Route::get('token-test', [SpotifyController::class, 'renderToken']);
 
-// works fine:
-Route::get('my-playlists', [SpotifyController::class, 'myPlaylists'])->name('playlists');
-Route::get('my-playlists/{playlistId}', [SpotifyController::class, 'renderPlaylist'])->name('playlist.songs');
+// functional links:
+Route::get('playlists', [SpotifyController::class, 'myPlaylists']);
+Route::get('my-albums', [SpotifyController::class, 'myAlbums']);
 
-// auth:
+// home page:
+Route::get('index', function () {
+    return view('index');
+})->name('index');
+
+// under construction:
+Route::get('my-tracks', [SpotifyController::class, 'myLikedSongs']);
+
+// now in progress:
+Route::get('playlist-titles', [SpotifyController::class, 'playlistTitles']);
+
+// get 'my saved tracks' to the database
+Route::get('save-my-tracks', [SpotifyController::class, 'getSavedTracksToDatabase']);
+
+Route::get('save-my-playlists', [SpotifyController::class, 'savePlaylists']);
+Route::get('save-playlist-tracks', [SpotifyController::class, 'savePlaylistTracks']);
+
 Route::get('/dashboard', function() {
     return view('dashboard', ['user' => auth()->user()]);
 })->name('dashboard');
+
 Route::get('spotify-code', function(Request $request) {
     
     $session = new Session(
@@ -70,6 +80,7 @@ Route::get('spotify-code', function(Request $request) {
 
     return redirect(route('dashboard'));
 });
+
 Route::post('spotify-authorize', function() {
     $session = new Session(
         env('SPOTIFY_CLIENT_ID'),
@@ -92,51 +103,20 @@ Route::post('spotify-authorize', function() {
     
 });
 
-
-
-// old routes
-// first:
-Route::get('auth', [SpotifyController::class, 'auth', 'auth']);
-
-// redirects here:
-
-// functional links:
-// Route::get('playlists', [SpotifyController::class, 'myPlaylists']);
-Route::get('my-albums', [SpotifyController::class, 'myAlbums']);
-
-// home page:
-Route::get('index', function () {
-    return view('index');
-})->name('index');
-
-// under construction:
-Route::get('my-tracks', [SpotifyController::class, 'myLikedSongs']);
-
-// now in progress:
-Route::get('playlist-titles', [SpotifyController::class, 'playlistTitles']);
-
-// get 'my saved tracks' to the database
-Route::get('save-my-tracks', [SpotifyController::class, 'getSavedTracksToDatabase']);
-
-Route::get('save-my-playlists', [SpotifyController::class, 'savePlaylists']);
-Route::get('save-playlist-tracks', [SpotifyController::class, 'savePlaylistTracks']);
-
-// Route::get('my-playlists/{playlistId}', function ($playlistId) {
-    //     $playlist = Playlist::where('id', $playlistId)->first();
-    //     // $playlistSongs = $playlist->songs;
-    //     return view('playlist-songs', [
-        //         'playlistSongs' => $playlist->songs,
-        //     ]);
-        // })->name('playlist.songs');
+// Route::get('test-the-bot', [SpotifyController::class, 'testTgBot']);
 
 
 
 // old tests:
-// Route::get('test-the-bot', [SpotifyController::class, 'testTgBot']);
+Route::get('/', function () {
+    return view('welcome');
+});
 
 // Route::get('controller-test/', [Controller::class, 'index']);
 
 // Route::get('token-test', [SpotifyController::class, 'token']);
+
+Route::get('test', [SpotifyController::class, 'test']);
 
 // transfered to SpotifyController
 // Route::get('test/', function () {
