@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class SpotifyToken extends Model
 {
+    use HasFactory;
+    
     protected $table = 'spotify_tokens';
 
     protected $fillable = [
@@ -14,7 +16,8 @@ class SpotifyToken extends Model
         'refresh_token',
         'expiration',
         'code',
+        'user_id',
     ];
 
-    use HasFactory;
+    
 }

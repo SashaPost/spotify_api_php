@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use SpotifyWebAPI\Session;
+use App\Models\User;
 use App\Models\SpotifyToken;
+use SpotifyWebAPI\Session;
 use SpotifyWebAPI\SpotifyWebAPI;
 
 class SpotifySessionService {
@@ -15,7 +16,9 @@ class SpotifySessionService {
     }
 
     public function instantiateSession() {
-        $spotifyTokens = SpotifyToken::latest()->first();
+        // $spotifyTokens = SpotifyToken::latest()->first();
+        $user = User::where('id', auth()->user()->id)->first();
+        $spotifyTokens = $user->spotify_tokens;
         $accessToken = $spotifyTokens->access_token;
         $refreshToken = $spotifyTokens->refresh_token;
 

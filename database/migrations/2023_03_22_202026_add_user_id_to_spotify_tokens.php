@@ -13,8 +13,9 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('spotify_token');
+        Schema::table('spotify_tokens', function (Blueprint $table) {
+            // $table->unsignedBigInteger('user_id');
+            // $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 
@@ -25,8 +26,8 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('spotify_token');
+        Schema::table('spotify_tokens', function (Blueprint $table) {
+            // $table->dropColumn('user_id');
         });
     }
 };

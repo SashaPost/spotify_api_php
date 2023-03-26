@@ -74,11 +74,19 @@ class UpdateSavedPlaylistsData implements ShouldQueue
             $new_playlist = $createIfNotService->playlist($playlist);
 
             $fetchedPlaylist = Playlist::where('spotify_id', $playlist->id)->first();
+            
+            if($fetchedPlaylist->total_tracks != $playlist->tracks->total)
+            {
+                UpdatePlaylistTracksData::dispatch($fetchedPlaylist->id);
+                UpdatePlaylistDuration::dispatch($fetchedPlaylist->id);
+            }
 
             if($fetchedPlaylist->duration === null)
             {
                 UpdatePlaylistDuration::dispatch($fetchedPlaylist->id);
             }
+
+
             // $test = $fetchedPlaylist->duration->duration_ms;
             // $secondTest = $fetchedPlaylist->duration;
 

@@ -2,20 +2,17 @@
 
 @extends('parent')
 
-@section('title', 'Playlists')
+@section('title', 'User Playlists')
 
 {{-- if (!$user) breaks the page here --}}
 @section('content')
 
     <a href="{{ route('dashboard') }}">Dashboard</a>
 
-    <form action="/user-playlists" method="GET">
-        @csrf
-        <button>User Playlists</button>
-    </form>
+    <a href="{{ route('playlists') }}">All Playlists</a>
 
     <h3>Playlists</h3>
-    <h5>{{ $totalCount }} playlists</h5>        
+    <h5>{{ $count }} playlists</h5>        
     <div class="container">
         <table>
             <thead>
@@ -70,20 +67,5 @@
                 @endforeach
             </tbody>
         </table>
-        {{ $playlists->links() }}
     </div>
 @endsection
-{{-- {{ $playlists }} --}}
-{{-- {{ $playlists->links() }} --}}
-
-{{-- <ol>
-    @foreach($playlists as $playlist)
-        <li>
-            @if($playlist->name != "")
-                <a href="{{ route('playlist.songs', $playlist->id) }}">{{ $playlist->name }}</a>
-            @else
-                <a href="{{ route('playlist.songs', $playlist->id) }}">{{ '*blank_name*' }}</a>
-                @endif
-            </li>
-            @endforeach
-        </ol> --}}

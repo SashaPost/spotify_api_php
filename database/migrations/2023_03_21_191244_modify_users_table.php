@@ -14,7 +14,9 @@ return new class extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('spotify_token');
+            //
+            $table->string('spotify_name')->nullable(true)->change();
+            $table->string('spotify_token')->nullable(true)->change();
         });
     }
 
@@ -26,7 +28,9 @@ return new class extends Migration
     public function down()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('spotify_token');
+            //
+            $table->string('spotify_name')->nullable(false)->change();
+            $table->string('spotify_token')->nullable(false)->change();
         });
     }
 };

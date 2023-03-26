@@ -18,9 +18,10 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
+        'spotify_name',
         'email',
         'password',
+        'username'
     ];
 
     /**
@@ -64,7 +65,7 @@ class User extends Authenticatable
 
     public function spotify_tokens()
     {
-        return $this->hasOne('App\SpotifyTokens');
+        return $this->hasOne(SpotifyToken::class, 'user_id');
     }
 
     public function isSpotifyAuthorized()

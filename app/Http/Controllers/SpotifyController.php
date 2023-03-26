@@ -63,15 +63,41 @@ class SpotifyController
     // works fine:
     public function myPlaylists(Request $request) 
     {
+        ini_set('max_execution_time', 720); // 300 seconds = 5 minutes
+
         UpdateSavedPlaylistsData::dispatch();
         
-        $playlists = Playlist::all();
+        $playlists = Playlist::paginate(50);    // simplePaginate()
+
         $totalCount = Playlist::count();
         // $playlists = Playlist::paginate(30);
+
+        $user = auth()->user();
 
         return view('my-playlists', [
             'playlists' => $playlists,
             'totalCount' => $totalCount,
+            'user' => $user,
+        ]);
+    }
+
+    public function owedPlaylists(Request $request)
+    {
+        UpdateSavedPlaylistsData::dispatch();
+
+        // current 'parent' template requires this in every method:
+        $api = $this->spotifySessionService->instantiateSession();
+        $user = $api->me();
+
+        // need to fix this;
+        // use the Playlist model method 'owners()' - fill this at first;
+        $playlists = Playlist::where('owner_id', $user->id)->get(); 
+        $count = count($playlists);   
+
+        return view('owed-playlists', [
+            'playlists' => $playlists,
+            'count' => $count,
+            'user' => $user,
         ]);
     }
 
@@ -115,6 +141,28 @@ class SpotifyController
 
 
     // new tests here:
+
+    public function renderToken(Request $request)
+    {
+        // $token = SessionLaravel::get('spotify_token');
+        // dump(SessionLaravel::all());   
+
+        // dump(SpotifyToken::latest()->first());
+
+        $tokens = SpotifyToken::latest()->first();
+
+        $user = auth()->user();
+        $user_token = $user->spotify_tokens;
+
+        $api = $this->spotifySessionService->instantiateSession();
+        $me = $api->me();
+        
+        return view('template-test', [
+            'tokens' => $tokens,
+            'user_token' => $user_token,
+            'me' => $me,
+        ]);
+    }
     public function test(Request $request)
     {
         $api = $this->spotifySessionService->instantiateSession();
@@ -177,19 +225,7 @@ class SpotifyController
 
 
 
-    public function renderToken(Request $request)
-    {
-        // $token = SessionLaravel::get('spotify_token');
-        // dump(SessionLaravel::all());   
-
-        // dump(SpotifyToken::latest()->first());
-
-        $tokens = SpotifyToken::latest()->first();
-        
-        return view('template-test', [
-            'tokens' => $tokens,
-        ]);
-    }
+    
     
     public function playlistTitles(Request $request) 
     {
