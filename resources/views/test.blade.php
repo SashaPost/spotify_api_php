@@ -1,3 +1,5 @@
 <!DOCTYPE html>
 
-{{ dd($me) }}
+{{-- {{ dd($me) }} --}}
+
+{{-- {{ dd($playlists) }} --}}

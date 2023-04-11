@@ -1,4 +1,4 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 
 @extends('parent')
 
@@ -36,7 +36,8 @@
             <tbody>
                 @foreach ($playlists as $playlist)
                     <tr>
-                        <td>{{ $loop->index + 1 }}</td>
+                        {{-- <td>{{ $loop->index + 1 }}</td> --}}
+                        <td>{{ ($playlists->currentPage() - 1) * $playlists->perPage() + $loop->index + 1 }}</td>
                         <td>
                             @if($playlist->name != "")
                                 <a href="{{ route('playlist.songs', $playlist->id) }}">{{ $playlist->name }}</a>
@@ -45,7 +46,14 @@
                             @endif 
                         </td>
                         <td>{{ $playlist->total_tracks }} songs</td>
-                        <td>{{ gmdate("H:i:s", $playlist->duration->duration_ms / 1000) }}</td>
+                        {{-- <td>{{ gmdate("H:i:s", $playlist->duration->duration_ms / 1000) }}</td> --}}
+                        <td>
+                            @if ($playlist->duration === null)
+                                N/A 
+                            @else
+                                {{ gmdate("H:i:s", $playlist->duration->duration_ms / 1000) }}
+                            @endif
+                        </td>
                         {{-- <td>{{ $playlist->created_at }}</td>
                         <td>{{ $playlist->updated_at }}</td> --}}
                         <td><a href="{{ $playlist->spotify_url }}">{{ $playlist->spotify_url }}</a></td>
@@ -70,7 +78,21 @@
                 @endforeach
             </tbody>
         </table>
-        {{ $playlists->links() }}
+        {{-- <div>{{ $playlists->links('pagination::simple-bootstrap-4') }}</div> --}}
+        <div class="pagination">
+            @if ($playlists->lastPage() > 1)
+                <div class="pagination-list">
+                    @for ($i = 1; $i <= $playlists->lastPage(); $i++)
+                    {{-- <li> --}}
+                    <span class="pagination-link{{ ($playlists->currentPage() == $i) ? ' is-current' : '' }}">
+                        {{-- <a href="{{ $playlists->url($i) }}" class="pagination-link {{ ($playlists->currentPage() == $i) ? ' is-current' : '' }}">{{ $i }}</a> --}}
+                        <a href="{{ $playlists->url($i) }}">{{ $i }}</a>
+                    </span>
+                        {{-- </li> --}}
+                    @endfor
+                </div>
+            @endif
+        </div>
     </div>
 @endsection
 {{-- {{ $playlists }} --}}

@@ -1,0 +1,18 @@
+28.03.2023; 17:52
+
+  After the structrure of job is clear, as it's implementation process (to run completely in bacrground using database), I need to create them for every process and execute a bunch of them at every step:
+  - just the user has logged in must be jobs executed for: 'list of Playlists', 'Artists', 'Albums' & etc.;
+  - 
+  
+  8000;
+  2500 grn;
+  1200 - car;
+  ~400 - blank;
+  
+  ~~ 7000 - total; 
+
+grep -r "max_execution_time" =>
+=> find 'max_execution_time' in 'app/Providers/AppServiceProvider.php:        ini_set('max_execution_time', 180);'
+
+ini_set() in the Job
+create the Jobs for every request from Spotify (for short bunches - 50 songs)

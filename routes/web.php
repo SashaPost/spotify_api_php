@@ -12,7 +12,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\SpotifyController;
-
+use App\Jobs\UpdateSavedPlaylistsData;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,13 +31,21 @@ Route::get('/', function () {
 });
 
 // tests:
+Route::get('/test', [SpotifyController::class, 'test']);
 Route::get('/token-test', [SpotifyController::class, 'renderToken']);
 Route::get('/user-playlists', [SpotifyController::class, 'owedPlaylists'])->name('user-playlists');
+Route::get('/max-execution-time', function () {
+    echo ini_get('max_execution_time');
+    phpinfo();
+});
 
 // DON'T TOUCH!
 Route::get('/playlists', [SpotifyController::class, 'myPlaylists'])->name('playlists');
 // Spotify API authorization:
 Route::get('/dashboard', function() {
+    // UpdateSavedPlaylistsData::dispatch();
+    // $user = auth()->user();
+    // UpdateSavedPlaylistsData::dispatch($user);
     return view('dashboard', ['user' => auth()->user()]);
 })->name('dashboard');  
 Route::post('spotify-authorize', function() {
@@ -155,7 +163,6 @@ Route::get('save-playlist-tracks', [SpotifyController::class, 'savePlaylistTrack
 
 // Route::get('token-test', [SpotifyController::class, 'token']);
 
-Route::get('test', [SpotifyController::class, 'test']);
 
 // transfered to SpotifyController
 // Route::get('test/', function () {

@@ -3,27 +3,44 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Models\SpotifyToken;
+
 use SpotifyWebAPI\Session;
+use App\Models\SpotifyToken;
+
+use Illuminate\Http\Request;
 use SpotifyWebAPI\SpotifyWebAPI;
+use Illuminate\Auth\Authenticatable;
 
 class SpotifySessionService {
 
     public function __construct(
-        private bool $autoRefreh = true,
+        private bool $autoRefresh = true,
         private bool $autoRetry = true,
+        // private Authenticatable $authUser = null,
+
+        // private bool $autoRefresh,
+        // private bool $autoRetry,
+        // public $authUser
     ) {
+        // $this->autoRefresh = true,
+        
+        // $this->authUser = $authUser;
     }
 
-    public function instantiateSession() {
+    // creates a Spotify session:
+    public function instantiateSession(User $user = null) {
         // $spotifyTokens = SpotifyToken::latest()->first();
-        $user = User::where('id', auth()->user()->id)->first();
+        // $user = $user ?? auth()->user();   
+        
+        $user = $user ?? User::where('id', auth()->user()->id)->first();
+        
+        // $user = User::where('id', $this->authUser->id)->first();
         $spotifyTokens = $user->spotify_tokens;
         $accessToken = $spotifyTokens->access_token;
         $refreshToken = $spotifyTokens->refresh_token;
 
         $options = [
-            'auto_refresh' => $this->autoRefreh, 
+            'auto_refresh' => $this->autoRefresh, 
             'auto_retry' => $this->autoRetry,
         ];
 
@@ -58,5 +75,33 @@ class SpotifySessionService {
 
         
         return $spotifyApi;
+    }
+
+    // gets all user's playlists from the Spotify API:
+    public function getAllPlaylists(User $user = null)
+    {
+        $api = $this->instantiateSession($user);
+        $playlists = $api->getMyPlaylists();
+        $total = $playlists->total;
+        
+        $limit = 50;
+        $offset = 0;
+        $all_playlists = [];
+
+        while ($playlists = $api->getMyPlaylists([
+            'limit' => $limit,
+            'offset' => $offset
+        ])) 
+        {
+            $all_playlists = array_merge($all_playlists, $playlists->items);
+            $offset += $limit;
+
+            if ($offset > $playlists->total)
+            {
+                break;
+            }
+        }
+
+        return $all_playlists;
     }
 }

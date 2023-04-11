@@ -2,18 +2,22 @@
 
 namespace App\Jobs;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
+// this shit doesn't work; don't know why
+// ini_set('max_execution_time', 720);
 
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
-use Illuminate\Foundation\Bus\Dispatchable;
-
-use App\Services\CreateIfNotService;
-use App\Services\SpotifySessionService;
+use App\Models\User;
 use App\Models\Playlist;
+use Illuminate\Bus\Queueable;
+
 use App\Models\PlaylistDuration;
+use App\Services\CreateIfNotService;
+use Illuminate\Queue\SerializesModels;
+
+use App\Services\SpotifySessionService;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 
 class UpdatePlaylistDuration implements ShouldQueue
 {
@@ -28,6 +32,7 @@ class UpdatePlaylistDuration implements ShouldQueue
     public $playlistId;
     public function __construct(
         $playlistId,
+        private User $user,
     )
     {
         //
@@ -46,7 +51,7 @@ class UpdatePlaylistDuration implements ShouldQueue
     {
         $databasePlaylist = Playlist::where('id', $this->playlistId)->first();
 
-        $api = $spotifySessionService->instantiateSession();
+        $api = $spotifySessionService->instantiateSession($this->user);
         $playlistTracks = $api->getPlaylistTracks($databasePlaylist->spotify_id);
         $updTotalTracks = $playlistTracks->total;
         
