@@ -43,8 +43,8 @@ class LoginController extends SpotifyController
     {
         $credentials = $request->validate(
             [
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+                'email' => ['required', 'email'],
+                'password' => ['required'],
             ]
         );
 

@@ -42,23 +42,55 @@ use App\Jobs\UpdateSavedPlaylistsData;
 use App\Jobs\UpdatePlaylistTracksData;
 use App\Jobs\UpdatePlaylistDuration;
 
-
+use GuzzleHttp\Client;
 
 class SpotifyController
 {
     use AuthorizesRequests, DispatchesJobs, ValidatesRequests;
 
     public string $token = "";
-
+    
     public function __construct(
-        Request $request,
+        // Request $request,
         protected TimeConverter $timeConverter,
         protected SpotifyWebAPI $spotifyClient,
         protected SpotifySessionService $spotifySessionService,
         protected CreateIfNotService $createIfNotService,
     ) {
-        
+
     }
+
+    // 'oAuthTwoTest' works fine again.
+    public function oAuthTwoTest(Request $request) {
+        return redirect($this->spotifySessionService->buildOAuthUri());
+    }
+
+    public function getAccessAndRefreshTokens(Request $request) {
+        // it was just a check:
+        // $code = $request->get('code');
+        // $state = $request->get('state');
+        $getTokens = $this->spotifySessionService->getTokens($request);
+        return [
+            'res' => $getTokens,
+            // check:
+            // 'code' => $code,
+            // 'state' => $state,
+        ];
+    }
+
+
+
+    public function oAuthTwo(Request $request)
+    {
+        $spotifySession = $this->spotifySessionService->session();
+        return redirect($spotifySession->getAuthorizeUrl($this->spotifySessionService->options));
+    }
+
+    public function callback(Request $request) {
+
+    }
+    
+    
     
     // works fine:
     public function myPlaylists(Request $request) 

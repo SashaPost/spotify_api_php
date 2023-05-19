@@ -6,6 +6,7 @@ use App\Models\Song;
 use App\Models\Album;
 use App\Models\Artist;
 use App\Models\Playlist;
+use App\Models\SpotifyToken;
 use App\Models\PlaylistDuration;
 
 class CreateIfNotService
@@ -18,6 +19,24 @@ class CreateIfNotService
     // specify '$track' as a stdClass object
     // change the methods provided just to array
     // and add all of them as a class properties
+    public function token(
+        $associatedArray,
+        $userId,
+        $code,
+    ) 
+    {
+        return SpotifyToken::firstOrCreate(
+        [
+            'access_token' => $associatedArray['access_token']
+        ],
+        [
+            'user_id' => $userId,
+            'code' => $code,
+            'expiration' => $associatedArray['expires_in'],
+            'refresh_token' => $associatedArray['refresh_token'],
+        ]);
+    }
+
     public function songFromSong($track)
     {
         return Song::firstOrCreate(

@@ -17,7 +17,7 @@ class SpotifyToken
             $session = new SpotifySession(
                 env('SPOTIFY_CLIENT_ID'),
                 env('SPOTIFY_CLIENT_SECRET'),
-                env('REDIRECT_URI')
+                env('REDIRECT_URI'),
             );
 
             // code is used to get access token

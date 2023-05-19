@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\SpotifyController;
 use App\Jobs\UpdateSavedPlaylistsData;
+use App\Services\SpotifySessionService;
+
+use GuzzleHttp\Client;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -24,6 +29,8 @@ use App\Jobs\UpdateSavedPlaylistsData;
 | contains the "web" middleware group. Now create something great!
 |
 */
+
+Route::get('/service-test', [SpotifySessionService::class, 'userHasAccessToken']);
 
 // 21.03.2022:
 Route::get('/', function () {
@@ -48,6 +55,35 @@ Route::get('/dashboard', function() {
     // UpdateSavedPlaylistsData::dispatch($user);
     return view('dashboard', ['user' => auth()->user()]);
 })->name('dashboard');  
+
+
+
+// working on it:
+
+// // make same shit in the controller method
+// // to use this routes in the middleware
+// Route::post('oauth/', [SpotifyController::class, 'oAuthTwo'])->name('oauth');   // let's try to use Guzzle for this one;
+
+
+
+// Now I have to use this routes in my middleware
+
+// Request User Authorization:
+// make GET request and perform redirect to the 
+// 'https://accounts.spotify.com/authorize?'
+// like 'oauthRequest' in ZohoController
+// when it works, rename method to 'oAuthRequest'
+Route::get('oauth-test/', [SpotifyController::class, 'oAuthTwoTest'])->name('oauth-test');
+Route::get('callback/', [SpotifyController::class, 'getAccessAndRefreshTokens'])->name('callback');
+// this must implement the action performed in 'spotify-authorize'
+// make POST request to the 'https://accounts.spotify.com/api/token' under the GET route endpoint
+// curl -X POST "https://accounts.spotify.com/api/token" \
+//      -H "Content-Type: application/x-www-form-urlencoded" \
+//      -d "grant_type=client_credentials&client_id=your-client-id&client_secret=your-client-secret"
+// Route::get('callback/', [SpotifyController::class, 'callback'])->name('callback');
+
+
+
 Route::post('spotify-authorize', function() {
     $session = new Session(
         env('SPOTIFY_CLIENT_ID'),

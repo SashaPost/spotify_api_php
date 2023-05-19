@@ -20,3 +20,7 @@ create the Jobs for every request from Spotify (for short bunches - 50 songs)
 11.04.2023
 - set 'max_execution_time' in controller method that renders Playlists and triggers Jobs to update it's contents (don't do this at first; try the secnd part); 
 - brake the Jobs into smaller parts;
+
+18.05.2023
+- create an API endpoint (something like '/refresh-user-data') to update the database with all new user data;
+- add hashing to store tokens&passwords in the database when project structure will be done (or at least clear);
