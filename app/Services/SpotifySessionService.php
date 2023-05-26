@@ -2,17 +2,18 @@
 
 namespace App\Services;
 
-use App\Models\User;
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Http\Request;
 
 use GuzzleHttp\Client;
-use SpotifyWebAPI\Session;
 
-use App\Models\SpotifyToken;
-use Illuminate\Http\Request;
+use SpotifyWebAPI\Session;
 use SpotifyWebAPI\SpotifyWebAPI;
 
+use App\Models\User;
+use App\Models\SpotifyToken;
+
 use App\Services\CreateIfNotService;
-use Illuminate\Auth\Authenticatable;
 
 class SpotifySessionService {
 
@@ -50,11 +51,6 @@ class SpotifySessionService {
         ];
         $this->oAuthBaseUri = env('SPOTIFY_OAUTH_BASE_URI');
         $this->tokenBaseUri = env('SPOTIFY_ACCESS_TOKEN_URI');
-        // $this->tokenRequestParameters = [
-        //     'code' => $code,
-        //     'redirect_uri' => ,
-        //     'grant_type' => 'authorization_code'
-        // ];
         $this->createIfNotService = $createIfNotService;
     }
 
@@ -101,15 +97,10 @@ class SpotifySessionService {
             $user->id,
             $code,
         );
+    }
 
-        return [
-            'status_code' => $statusCode,
-            'response_body' => $responseBody,
-            'token' => $token,
-            // check:
-            // 'code' => $code,
-            // 'state' => $state,
-        ];
+    public function refreshAccessToken(User $user = null) {
+        
     }
 
     public function session() {
@@ -119,31 +110,13 @@ class SpotifySessionService {
             env('REDIRECT_URI')
         );
     }
-
-
-
-    public function userHasAccessToken(User $user = null) {
-        $user = $user ?? User::where('id', auth()->user()->id)->first();
-        $userTokens = $user->spotify_tokens;  // is null for newly created users;
-        // dump($userTokens);
-        
-        // if ($userTokens !== null) {
-        if ($userTokens) {
-            return true;
-            // return 1;
-        }
-        return false;
-        // return 0;
-    }
+    
 
 
     public function getAccessToken(User $user = null) {
 
     }
 
-    public function refreshAccessToken(User $user = null) {
-
-    }
 
 
     // if will be used later rename to 'apiInstance' or something like that.

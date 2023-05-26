@@ -60,36 +60,42 @@ class SpotifyController
 
     }
 
+    public function test(
+        Request $request, 
+        User $user = null,
+    )
+    {   
+        $user = $user ?? User::where('id', auth()->user()->id)->first();
+        
+        // $api = $this->spotifySessionService->instantiateSession($user);
+        // $me = $api->me();
+
+        // so it may be suitable to use 'now()->timestamp' to check if access token was expired
+        // but it's better to catch an exception in the middleware (find out what error to catch)
+        $userTokens = $user->spotify_tokens;
+        $tokenExpiration = $userTokens->expiration;
+
+        $now = now();
+        $timestampNow = $now->timestamp;
+
+        return view('test', [
+            'user_tokens' => $userTokens,
+            'token_expiration' => $tokenExpiration,
+            'now' => $now,
+            'timestamp_now' => $timestampNow,
+        ]);
+    }
+
     // 'oAuthTwoTest' works fine again.
-    public function oAuthTwoTest(Request $request) {
+    public function oAuthRequest(Request $request) {
         return redirect($this->spotifySessionService->buildOAuthUri());
     }
 
     public function getAccessAndRefreshTokens(Request $request) {
-        // it was just a check:
-        // $code = $request->get('code');
-        // $state = $request->get('state');
         $getTokens = $this->spotifySessionService->getTokens($request);
-        return [
-            'res' => $getTokens,
-            // check:
-            // 'code' => $code,
-            // 'state' => $state,
-        ];
+        return redirect(route('dashboard'));
     }
 
-
-
-    public function oAuthTwo(Request $request)
-    {
-        $spotifySession = $this->spotifySessionService->session();
-        return redirect($spotifySession->getAuthorizeUrl($this->spotifySessionService->options));
-    }
-
-    public function callback(Request $request) {
-
-    }
-    
     
     
     // works fine:
@@ -199,85 +205,6 @@ class SpotifyController
         ]);
     }
 
-    // write a method to remove the song from all own playlists
-    public function test(Request $request)
-    {   
-        // $user = auth()->user()->id;  // 1
-
-        // $user = $user ?? User::where('id', auth()->user()->id);
-
-        // this test passed:
-        $user = null;
-        // $user = auth()->user();
-        $user = $user ?? User::where('id', auth()->user()->id)->first();
-        
-        $api = $this->spotifySessionService->instantiateSession($user);
-
-        $me = $api->me();
-
-
-        $playlist = Playlist::latest()->first();
-
-        $playlist_tracks = $api->getPlaylistTracks($playlist->spotify_id);
-
-        $limit = 50;
-        $offset = 0;
-        $total = $playlist_tracks->total;
-
-        $tracks = [];
-
-        while ($playlist_tracks = $api->getPlaylistTracks($playlist->spotify_id, [
-            'limit' => $limit,
-            'offset' => $offset
-        ])){
-            foreach ($playlist_tracks->items as $track){
-                dump($track);
-            }
-        }
-
-        // UpdateSavedPlaylistsData::dispatch($user);
-        
-        // $spotifyTokens = $user->spotify_tokens;
-        // $accessToken = $spotifyTokens->access_token;
-        // $refreshToken = $spotifyTokens->refresh_token;
-
-        // $authUserId = auth()->user()->id;
-        // dump($authUserId);
-        // dump($user);
-
-        // $user = User::where('id', $authUser->id)->first();
-
-
-        // $playlists = $this->spotifySessionService->getAllPlaylists();
-
-        // $api = $this->spotifySessionService->instantiateSession();
-        // $me = $api->me();
-        
-        // $playlistsSpotify = $api->getMyPlaylists();
-        
-        // $playlists = Playlist::all();
-        
-
-        // UpdatePlaylistDuration::dispatch($playlist->spotify_id);
-
-        // $playlistSongs = $playlist->songs;
-        // // foreach $playlistSongs $totalDuration += $song->duration_ms
-        // $totalDurationMs = 0;
-        // foreach ($playlistSongs as $song)
-        // {
-        //     $totalDurationMs += $song->duration_ms;
-        // }
-
-        // $playlistDuration = $this->createIfNotService->playlistDuration($playlist->id, $totalDurationMs);
-
-        // $pD = $playlist->duration;
-
-        return view('test', [
-            // 'playlists' => $playlists,
-            // 'me' => $me,
-            // 'playlists' => $playlistsSpotify,
-        ]);
-    }
 
     public function myAlbums(Request $request)
     {
